@@ -109,7 +109,8 @@ class OutputAnalyzer:
         self, output_files: Union[List[str], Dict[str, str]], max_chunks: int = 3
     ) -> str:
         """
-        Analyze the output files using local LLM or basic stats.
+        Analyze the output files using local LLM or basic stats. Attempts to produce a structured
+        and meaningful summary with clearly defined sections.
         """
         logger.info(f"Analyzing output files: {output_files}")
         combined_data = self._read_and_combine_data(output_files)
@@ -117,16 +118,35 @@ class OutputAnalyzer:
         # Initialize ML if needed
         self._initialize_ml()
 
+        # If ML is not available, fallback to basic analysis.
         if not self.has_ml_capabilities or not self.SUMMARIZER:
             return self._basic_analysis(combined_data)
 
         try:
-            # Create more focused prompts for analysis
+            # Use only a subset of data for summarization to avoid large prompt issues
             data_sample = json.dumps(combined_data[:100], indent=2)
+
+            # Well-structured prompts that ask the summarizer to present the findings
+            # in a clear, bulleted format.
             prompts: List[str] = [
-                f"As a data analyst, analyze this JSON data and identify the main insights: {data_sample}",
-                f"What are the recurring patterns and significant trends in this dataset? Data: {data_sample}",
-                f"Provide a concise summary of the key findings and notable observations from this data: {data_sample}",
+                (
+                    "You are a data analyst. You have been given the following JSON data sample. "
+                    "First, identify the main insights and present them as a short list of bullet points:\n\n"
+                    f"{data_sample}"
+                    "\n\nPlease provide a concise list of key insights (bulleted) without extra commentary."
+                ),
+                (
+                    "Now, examine the data again and identify recurring patterns and significant trends. "
+                    "Present them as a short list of bullet points:\n\n"
+                    f"{data_sample}"
+                    "\n\nPlease provide a concise list of patterns and trends (bulleted) without extra commentary."
+                ),
+                (
+                    "Finally, summarize the most important findings and notable observations. "
+                    "Give a short bullet-pointed list focusing on crucial takeaways:\n\n"
+                    f"{data_sample}"
+                    "\n\nPlease provide the key findings (bulleted), focusing on the essential conclusions."
+                ),
             ]
 
             summaries: List[str] = []
@@ -134,28 +154,28 @@ class OutputAnalyzer:
 
             for i, prompt in enumerate(prompts, 1):
                 logger.info(f"Processing analysis section {i}/{total_chunks}")
-
                 summary = self.SUMMARIZER(
                     prompt,
-                    max_length=200,  # Increased for more detailed summaries
-                    min_length=100,  # Increased minimum length
-                    do_sample=False,  # Disable sampling for more focused results
+                    max_length=200,
+                    min_length=50,
+                    do_sample=False,
                     num_beams=4,
                     no_repeat_ngram_size=3,
                 )
-                summaries.append(summary[0]["summary_text"])
+                # Expecting the summarizer to return a list with one dictionary: [{"summary_text": "..."}]
+                summaries.append(summary[0]["summary_text"].strip())
 
-            # Format the analysis with more structure
+            # Construct the final analysis report
             analysis: str = "# Detailed Analysis Report\n\n"
 
             analysis += "## Key Insights\n"
-            analysis += "- " + summaries[0].replace(". ", ".\n- ") + "\n\n"
+            analysis += summaries[0] + "\n\n"
 
             analysis += "## Patterns and Trends\n"
-            analysis += "- " + summaries[1].replace(". ", ".\n- ") + "\n\n"
+            analysis += summaries[1] + "\n\n"
 
             analysis += "## Important Findings\n"
-            analysis += "- " + summaries[2].replace(". ", ".\n- ") + "\n\n"
+            analysis += summaries[2] + "\n\n"
 
             # Add statistical overview
             analysis += "## Statistical Overview\n"
