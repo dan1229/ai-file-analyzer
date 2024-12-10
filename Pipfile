@@ -1,0 +1,19 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+transformers = "*"
+torch = "*"
+dateparser = "*"
+accelerate = "*"
+
+[dev-packages]
+black = "*"
+mypy = "*"
+flake8 = "*"
+types-dateparser = "*"
+
+[requires]
+python_version = "3.12"
