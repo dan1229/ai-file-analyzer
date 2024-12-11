@@ -1,0 +1,17 @@
+{
+    "tasks_by_date": {
+        "2024-01-01": {
+            "files_processed": 0,
+            "total_lines": 0,
+            "total_words": 0,
+            "files": [
+                {
+                    "path": "path/to/file",
+                    "size": 1234,
+                    "lines": 10,
+                    "words": 100
+                }
+            ]
+        }
+    }
+}

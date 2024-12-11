@@ -1,122 +1,89 @@
 from typing import List, Dict, Any, Optional
+import json
 import os
+from datetime import datetime
 
 
-from ..parsers.date_parser import (
-    extract_top_line_info,
-    extract_date_from_tags,
-    build_day_to_date_map,
-)
-from ..parsers.task_parser import extract_tasks
+class DocumentProcessor:
+    """Simple document processor for extracting structured information"""
 
+    def __init__(self, file_paths: List[str], config_path: str):
+        self.file_paths = file_paths
+        with open(config_path, "r") as f:
+            self.config = json.load(f)
 
-def process_task(
-    task_stack: List[Dict[str, str]], date: Optional[str], stats: Dict[str, Any]
-) -> None:
-    """Process a task and its subtasks, updating the statistics dictionary."""
-    if not date:
-        return
-
-    # Initialize date stats if not exists
-    if date not in stats["tasks_by_date"]:
-        stats["tasks_by_date"][date] = {
-            "tasks_total": 0,
-            "tasks_completed": 0,
-            "workouts": [],
-            "habits": {},
+    def process_content(self, content: str) -> Dict[str, Any]:
+        """Extract basic information from content"""
+        return {
+            "content_length": len(content),
+            "line_count": len(content.splitlines()),
+            "word_count": len(content.split()),
+            "has_content": bool(content.strip()),
         }
 
-    date_stats = stats["tasks_by_date"][date]
-    task_text = task_stack[-1]["text"].lower()
-    status = task_stack[-1]["status"]
 
-    # Update overall stats
-    stats["tasks_total"] += 1
-    if status == "completed":
-        stats["tasks_completed"] += 1
+def process_task(task_data: Dict[str, Any], stats: Dict[str, Any]) -> None:
+    """Process file information and update statistics."""
+    date = datetime.now().strftime("%Y-%m-%d")
 
-    # Update per-date stats
-    date_stats["tasks_total"] += 1
-    if status == "completed":
-        date_stats["tasks_completed"] += 1
+    if date not in stats["tasks_by_date"]:
+        stats["tasks_by_date"][date] = {
+            "files_processed": 0,
+            "total_lines": 0,
+            "total_words": 0,
+            "files": [],
+        }
 
-    # Process workouts
-    if "workout" in task_text or "🏋️" in task_text:
-        if len(task_stack) > 1:
-            # Add each sub-task as a workout variant
-            for sub_task in task_stack[1:]:
-                date_stats["workouts"].append(
-                    {"type": sub_task["text"], "status": sub_task["status"]}
-                )
-        else:
-            date_stats["workouts"].append({"type": task_text, "status": status})
+    current_date_stats = stats["tasks_by_date"][date]
+    current_date_stats["files_processed"] += 1
+    current_date_stats["total_lines"] += task_data.get("line_count", 0)
+    current_date_stats["total_words"] += task_data.get("word_count", 0)
 
-    # Process habits
-    habits_list = [
-        "study hebrew",
-        "massage scalp",
-        "red light mask",
-        "take out trash",
-        "check plants water",
-        "weekly planning",
-        "fantasy waivers",
-        "set fantasy line ups",
-    ]
-
-    for habit in habits_list:
-        if habit in task_text:
-            if habit not in date_stats["habits"]:
-                date_stats["habits"][habit] = []
-            date_stats["habits"][habit].append({"status": status})
+    if "path" in task_data:
+        current_date_stats["files"].append(
+            {
+                "path": task_data["path"],
+                "size": task_data.get("content_length", 0),
+                "lines": task_data.get("line_count", 0),
+                "words": task_data.get("word_count", 0),
+            }
+        )
 
 
 def process_input_file(
-    file_path: str, input_year: str, stats: Dict[str, Any], use_ai: bool = False
+    file_path: str,
+    config_path: str,
+    stats: Dict[str, Any],
+    batch_size: int = 32,  # kept for compatibility
 ) -> Optional[str]:
     """
-    Process a single input file and update the statistics.
-    Returns potentially the filename where the output / analysis for this file is stored.
+    Process files using simple text analysis.
     """
-    # Only import AI components if needed
-    if use_ai:
-        from ..ai.integrator import AIIntegrator
+    try:
+        # Skip binary files and very large files
+        if not os.path.isfile(file_path):
+            return None
 
-        ai = AIIntegrator(os.path.dirname(file_path))
-    else:
-        ai = None
+        file_size = os.path.getsize(file_path)
+        if file_size > 1024 * 1024:  # Skip files larger than 1MB
+            print(f"Skipping large file {file_path}: {file_size/1024/1024:.2f}MB")
+            return None
 
-    with open(file_path, "r", encoding="utf-8") as f:
-        content = f.read()
+        try:
+            with open(file_path, "r", encoding="utf-8") as f:
+                content = f.read()
+        except UnicodeDecodeError:
+            print(f"Skipping binary file {file_path}")
+            return None
 
-    # Extract date information
-    year, week_num, day_of_year = extract_top_line_info(content)
-    date_from_tags = extract_date_from_tags(content)
+        processor = DocumentProcessor([file_path], config_path)
+        task_data = processor.process_content(content)
+        task_data["path"] = file_path
 
-    # Skip if year doesn't match input year
-    # TODO what to do here?
-    # if input_year and year and str(year) != input_year:
-    #     return None
+        process_task(task_data, stats)
 
-    # Process with AI if enabled and we have a valid date
-    day_to_date_map = {}
-
-    if ai:
-        return ai.process_file(file_path)
-    else:
-        # Handle weekly vs daily files
-        if year is not None and day_of_year is not None:
-            day_to_date_map = build_day_to_date_map(year, day_of_year, content)
-        else:
-            if date_from_tags and date_from_tags.endswith(input_year):
-                day_to_date_map = build_day_to_date_map(
-                    None, None, content, fallback_date=date_from_tags
-                )
-
-        if day_to_date_map:
-            extract_tasks(content, day_to_date_map, stats)
-        else:
-            if date_from_tags and date_from_tags.endswith(input_year):
-                single_day_map = {"All": date_from_tags}
-                extract_tasks(content, single_day_map, stats)
+    except Exception as e:
+        print(f"Error processing {file_path}: {str(e)}")
+        return None
 
     return None

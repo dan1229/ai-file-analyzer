@@ -1,6 +1,7 @@
 import os
 import logging
 import argparse
+import json
 
 from src.ai.output_analyzer import OutputAnalyzer
 from .utils.file_utils import scan_directory
@@ -57,16 +58,6 @@ def get_validated_year(default_year: str, autorun: bool = False) -> str:
     return year
 
 
-def get_analysis_settings(autorun: bool = False) -> dict:
-    if autorun:
-        logger.info("Autorun enabled, using AI analysis")
-    else:
-        logger.info("=== Analysis Type ===")
-        logger.info("Using AI-Enhanced analysis")
-
-    return {"ai_enabled": True}
-
-
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -74,17 +65,33 @@ def main() -> None:
         action="store_true",
         help="Run with default values without prompting",
     )
+    parser.add_argument(
+        "--config",
+        default="config/analysis_config.json",
+        help="Path to the analysis configuration file",
+    )
     args = parser.parse_args()
 
     logger.info("Starting Task Analyzer")
     logger.info("=" * 30)
 
+    # Load configuration
+    try:
+        with open(args.config, "r") as f:
+            config = json.load(f)
+    except FileNotFoundError:
+        logger.error(f"Configuration file not found: {args.config}")
+        return
+    except json.JSONDecodeError:
+        logger.error(f"Invalid JSON in configuration file: {args.config}")
+        return
+
     DEFAULT_DIR = os.getcwd()
-    DEFAULT_YEAR = "2024"
-    DEFAULT_FILE_TYPES = ["md", "txt", "py", "js", "html", "css", "json", "yaml", "yml"]
+    DEFAULT_FILE_TYPES = config.get(
+        "file_types", ["md", "txt", "py", "js", "html", "css", "json", "yaml", "yml"]
+    )
 
     directory = get_validated_directory(DEFAULT_DIR, args.autorun)
-    year = get_validated_year(DEFAULT_YEAR, args.autorun)
     file_types = DEFAULT_FILE_TYPES
 
     logger.info("Beginning file scan")
@@ -96,9 +103,11 @@ def main() -> None:
     logger.info("=== Processing Tasks ===")
     stats = {"tasks_total": 0, "tasks_completed": 0, "tasks_by_date": {}}
 
-    logger.info("AI Analysis enabled")
+    logger.info("ML Pipeline enabled")
 
     output_files = {}
+    batch_size = config.get("batch_size", 32)
+
     for i, file_path in enumerate(files, 1):
         if i % 50 == 0 or i == total_files:
             progress = (i / total_files) * 100
@@ -106,13 +115,19 @@ def main() -> None:
                 f"Processing progress: {progress:.1f}% ({i}/{total_files} files)"
             )
 
-        output_file = process_input_file(file_path, year, stats, True)  # Always use AI
+        output_file = process_input_file(
+            file_path=file_path,
+            config_path=args.config,
+            stats=stats,
+            batch_size=batch_size,
+        )
         if output_file:
             output_files[output_file] = output_file
 
+    logger.debug(f"Final stats: {json.dumps(stats, indent=2)}")
     logger.info("Processing completed, preparing results")
-    logger.info("Analyzing results with AI")
-    logger.info(OutputAnalyzer().analyze_output(output_files))
+    logger.info("Analyzing results")
+    logger.info(OutputAnalyzer().analyze_output(stats))
 
 
 if __name__ == "__main__":

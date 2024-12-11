@@ -18,6 +18,13 @@
 add readme badge
 
 
+
+add ability for users to choose prompt / output
+- i.e., do you want a 'spotify wrapped' type of analysis?
+- or do you want basic stats?
+- or what!?
+
+
 -------------------------------------------------------
 
 ##### Copyright 2024 © Daniel Nazarian.
