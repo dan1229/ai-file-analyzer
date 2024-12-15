@@ -15,23 +15,50 @@ def get_file_type(file_path):
 def analyze_file_content(file_path, summarizer):
     """Analyze text content of supported file types."""
     try:
-        # Only process text-based files
-        if not get_file_type(file_path).startswith(
-            ("text/", "application/json", "application/xml")
+        # Only process text-based or structured text (like JSON/XML) files
+        ftype = get_file_type(file_path)
+        if not (
+            ftype.startswith("text/")
+            or ftype in ["application/json", "application/xml"]
         ):
             return None
 
-        with open(file_path, "r", encoding="utf-8") as f:
+        with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
             content = f.read()
             if len(content.strip()) == 0:
                 return None
 
-            # Truncate content if too long
-            content = content[:1000]  # Analyze first 1000 chars
-            summary = summarizer(content, max_length=50, min_length=10, do_sample=False)
+            # Truncate content if too long to avoid overhead
+            truncated_content = content[:1000]
+            summary = summarizer(
+                truncated_content, max_length=50, min_length=10, do_sample=False
+            )
             return summary[0]["summary_text"]
     except Exception as e:
         return f"Error analyzing file: {str(e)}"
+
+
+def generate_long_report(
+    directory_path, total_files, total_size, file_types, file_summaries
+):
+    """Generate a long descriptive text of the directory and its files."""
+    report_lines = []
+    report_lines.append(f"Directory: {directory_path}")
+    report_lines.append(f"Total number of files: {total_files}")
+    report_lines.append(f"Total size (in MB): {total_size / (1024*1024):.2f}")
+    report_lines.append("")
+    report_lines.append("File type distribution:")
+    for ftype, count in file_types.most_common():
+        report_lines.append(f"- {ftype}: {count} files")
+
+    if file_summaries:
+        report_lines.append("")
+        report_lines.append("Individual file summaries:")
+        for file_name, summary in file_summaries:
+            report_lines.append(f"\nFile: {file_name}")
+            report_lines.append(f"Summary: {summary}")
+
+    return "\n".join(report_lines)
 
 
 def analyze_directory(directory_path):
@@ -68,7 +95,7 @@ def analyze_directory(directory_path):
             if summary:
                 file_summaries.append((file, summary))
 
-    # Generate report
+    # Print initial report
     print("\n=== Directory Analysis Report ===")
     print(f"\nTotal Files: {total_files}")
     print(f"Total Size: {total_size / (1024*1024):.2f} MB")
@@ -77,10 +104,23 @@ def analyze_directory(directory_path):
     for file_type, count in file_types.most_common():
         print(f"- {file_type}: {count} files")
 
-    print("\nFile Content Summaries:")
-    for file_name, summary in file_summaries:
-        print(f"\n{file_name}:")
-        print(f"Summary: {summary}")
+    if file_summaries:
+        print("\nFile Content Summaries:")
+        for file_name, summary in file_summaries:
+            print(f"\n{file_name}:")
+            print(f"Summary: {summary}")
+
+    # Generate a long textual report of everything
+    long_report = generate_long_report(
+        directory_path, total_files, total_size, file_types, file_summaries
+    )
+
+    # Now produce a final high-level summary of the entire directory
+    print("\n\n=== Final Directory Summary (High-Level) ===")
+    final_summary = summarizer(
+        long_report, max_length=200, min_length=50, do_sample=False
+    )[0]["summary_text"]
+    print(final_summary)
 
 
 def main():
