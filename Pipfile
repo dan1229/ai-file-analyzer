@@ -8,6 +8,7 @@ transformers = "*"
 torch = "*"
 dateparser = "*"
 accelerate = "*"
+sentencepiece = "*"
 
 [dev-packages]
 black = "*"

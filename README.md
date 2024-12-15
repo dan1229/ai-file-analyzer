@@ -21,6 +21,12 @@ AI File Analyzer is a Python-based tool for analyzing Markdown-based task lists 
 git clone https://github.com/dan1229/ai-file-analyzer.git
 ```
 
+2. Install the requirements:
+
+```bash
+pipenv install
+```
+
 ## Usage
 
 Run the script with:
