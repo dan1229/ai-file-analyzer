@@ -6,7 +6,8 @@ from transformers import pipeline  # type: ignore[import-untyped]
 import torch
 from datetime import datetime
 from tqdm import tqdm
-from typing import Dict, List, Tuple, Optional, Union, Any
+from typing import Dict, List, Tuple, Optional, Union, Any, Sequence
+import argparse
 
 
 def get_file_type(file_path: Union[str, Path]) -> str:
@@ -275,7 +276,43 @@ def analyze_directory(
             print(f"\nError writing to output file: {str(e)}")
 
 
-def main() -> None:
+def autorun(
+    directory: str,
+    output_file: str,
+    year_wrapped: bool = False,
+) -> None:
+    """
+    Automated run function for CI environments.
+
+    Args:
+        directory: Path to the directory to analyze
+        output_file: Path where to save the output
+        year_wrapped: Whether to generate a year-wrapped style report
+    """
+    if not os.path.exists(directory):
+        raise ValueError(f"Directory does not exist: {directory}")
+
+    analyze_directory(directory, output_file, year_wrapped)
+
+
+def main(argv: Optional[Sequence[str]] = None) -> None:
+    parser = argparse.ArgumentParser(description="Directory Analysis Tool")
+    parser.add_argument("--ci", action="store_true", help="Run in CI mode")
+    parser.add_argument("--directory", type=str, help="Directory to analyze")
+    parser.add_argument("--output", type=str, help="Output file path")
+    parser.add_argument(
+        "--year-wrapped", action="store_true", help="Generate year-wrapped report"
+    )
+
+    args = parser.parse_args(argv)
+
+    if args.ci:
+        if not args.directory or not args.output:
+            raise ValueError("In CI mode, --directory and --output are required")
+        autorun(args.directory, args.output, args.year_wrapped)
+        return
+
+    # Original interactive code
     print("\n" + "=" * 50)
     print("📁 Directory Analysis Tool 📊")
     print("=" * 50 + "\n")

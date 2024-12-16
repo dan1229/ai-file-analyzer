@@ -79,4 +79,4 @@ jobs:
         pipenv install
         
     - name: Run main script
-      run: pipenv run python -m src.analyze_files --autorun
+      run: pipenv run python -m src.analyze_files --ci
