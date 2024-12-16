@@ -1,6 +1,8 @@
+import os
 from pathlib import Path
 import mimetypes
 from collections import Counter
+from transformers import pipeline  # type: ignore[import-untyped]
 import torch
 from datetime import datetime
 from tqdm import tqdm
@@ -360,6 +362,7 @@ def autorun(
 ) -> None:
     """
     Automated run function for CI environments.
+    Skips ML-based analysis for compatibility.
 
     Args:
         directory: Path to the directory to analyze
@@ -369,7 +372,54 @@ def autorun(
     if not os.path.exists(directory):
         raise ValueError(f"Directory does not exist: {directory}")
 
-    analyze_directory(directory, output, year_wrapped)
+    # Basic file statistics without ML analysis
+    stats = {
+        "total_files": 0,
+        "total_size": 0,
+        "file_types": Counter(),
+        "monthly_activity": Counter(),
+        "largest_files": [],
+        "file_summaries": [],  # Empty since we skip ML analysis
+    }
+
+    for root, dirs, files in os.walk(directory):
+        for file in files:
+            file_path = Path(root) / file
+            try:
+                file_stats = process_file_stats(file_path)
+                if file_stats:
+                    stats["total_files"] += 1
+                    stats["total_size"] += file_stats["size"]
+                    stats["file_types"][file_stats["type"]] += 1
+                    stats["monthly_activity"][
+                        file_stats["modified_time"].strftime("%B")
+                    ] += 1
+                    stats["largest_files"].append((file_stats["size"], file_path))
+            except Exception as e:
+                print(f"Error processing {file_path}: {str(e)}")
+
+    stats["largest_files"].sort(reverse=True)
+    stats["largest_files"] = stats["largest_files"][:5]
+
+    # Generate basic report
+    if year_wrapped:
+        output_text = generate_year_wrapped_report(stats, datetime.now().year)
+    else:
+        output_text = generate_long_report(
+            directory,
+            stats["total_files"],
+            stats["total_size"],
+            stats["file_types"],
+            stats["file_summaries"],
+        )
+
+    # Save output
+    try:
+        with open(output, "w", encoding="utf-8") as f:
+            f.write(output_text)
+        print(f"\nOutput has been saved to: {output}")
+    except Exception as e:
+        print(f"\nError writing to output file: {str(e)}")
 
 
 def main(argv: Optional[Sequence[str]] = None) -> None:
