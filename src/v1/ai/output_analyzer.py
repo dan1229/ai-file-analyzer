@@ -57,10 +57,10 @@ class OutputAnalyzer:
         analysis.append(f"- Total words counted: {total_words}\n")
         if total_files > 0:
             analysis.append(
-                f"- Average lines per file: {total_lines/total_files:.1f}\n"
+                f"- Average lines per file: {total_lines / total_files:.1f}\n"
             )
             analysis.append(
-                f"- Average words per file: {total_words/total_files:.1f}\n\n"
+                f"- Average words per file: {total_words / total_files:.1f}\n\n"
             )
 
         # Statistics by Date

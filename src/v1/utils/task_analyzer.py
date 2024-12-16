@@ -66,7 +66,7 @@ def process_input_file(
 
         file_size = os.path.getsize(file_path)
         if file_size > 1024 * 1024:  # Skip files larger than 1MB
-            print(f"Skipping large file {file_path}: {file_size/1024/1024:.2f}MB")
+            print(f"Skipping large file {file_path}: {file_size / 1024 / 1024:.2f}MB")
             return None
 
         try:

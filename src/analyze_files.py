@@ -51,7 +51,7 @@ def generate_long_report(
     report_lines: List[str] = []
     report_lines.append(f"Directory: {directory_path}")
     report_lines.append(f"Total number of files: {total_files}")
-    report_lines.append(f"Total size (in MB): {total_size / (1024*1024):.2f}")
+    report_lines.append(f"Total size (in MB): {total_size / (1024 * 1024):.2f}")
     report_lines.append("")
     report_lines.append("File type distribution:")
     for ftype, count in file_types.most_common():
@@ -84,7 +84,7 @@ def process_file_stats(file_path: Path) -> Optional[Dict[str, Any]]:
 
 def format_size(size_bytes: int) -> str:
     """Convert bytes to human readable format."""
-    return f"{size_bytes / (1024*1024):.2f} MB"
+    return f"{size_bytes / (1024 * 1024):.2f} MB"
 
 
 def process_directory_contents(
