@@ -116,6 +116,17 @@ def process_directory_contents(
         "AppData",
         "Cache",
         "Caches",
+        ".vscode",
+        "dist",
+        "build",
+        ".next",
+        "target",
+        "vendor",
+        "tmp",
+        "temp",
+        "logs",
+        ".idea",
+        ".gradle",
     }
 
     SUMMARY_EXTENSIONS: set[str] = {
@@ -127,6 +138,42 @@ def process_directory_contents(
         ".css",
         ".json",
         ".xml",
+    }
+
+    SKIP_EXTENSIONS: set[str] = {
+        ".pyc",
+        ".pyo",
+        ".pyd",  # Python compiled files
+        ".exe",
+        ".dll",
+        ".so",
+        ".dylib",  # Binaries
+        ".jpg",
+        ".jpeg",
+        ".png",
+        ".gif",
+        ".ico",
+        ".svg",  # Images
+        ".mp3",
+        ".mp4",
+        ".avi",
+        ".mov",  # Media files
+        ".zip",
+        ".tar",
+        ".gz",
+        ".rar",  # Archives
+        ".pdf",
+        ".doc",
+        ".docx",  # Documents
+        ".class",
+        ".jar",  # Java
+        ".o",
+        ".a",
+        ".lib",  # Compiled objects
+        ".lock",
+        ".log",  # Lock and log files
+        ".min.js",
+        ".min.css",  # Minified files
     }
 
     total_files = sum(
@@ -141,6 +188,14 @@ def process_directory_contents(
 
             for file in files:
                 file_path = Path(root) / file
+
+                if file_path.suffix.lower() in SKIP_EXTENSIONS:
+                    pbar.update(1)
+                    continue
+
+                if file_path.name.startswith("."):
+                    pbar.update(1)
+                    continue
 
                 if file_path.stat().st_size > 10_000_000:
                     pbar.update(1)
@@ -307,7 +362,7 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
     args = parser.parse_args(argv)
 
     if args.autorun:
-        directory = args.directory or str(Path.home())
+        directory = Path.cwd()
         output = args.output or os.path.join(
             "out", datetime.now().strftime("%Y%m%d_%H%M%S") + ".txt"
         )
