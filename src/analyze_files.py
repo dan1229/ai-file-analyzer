@@ -2,22 +2,22 @@ import os
 from pathlib import Path
 import mimetypes
 from collections import Counter
-from transformers import pipeline
+from transformers import pipeline  # type: ignore[import-untyped]
 import torch
 from datetime import datetime
 from tqdm import tqdm
+from typing import Dict, List, Tuple, Optional, Union, Any
 
 
-def get_file_type(file_path):
+def get_file_type(file_path: Union[str, Path]) -> str:
     """Determine file type based on extension and mime type."""
-    mime_type, _ = mimetypes.guess_type(file_path)
+    mime_type, _ = mimetypes.guess_type(str(file_path))
     return mime_type or "unknown"
 
 
-def analyze_file_content(file_path, summarizer):
+def analyze_file_content(file_path: Union[str, Path], summarizer: Any) -> Optional[str]:
     """Analyze text content of supported file types."""
     try:
-        # Only process text-based or structured text (like JSON/XML) files
         ftype = get_file_type(file_path)
         if not (
             ftype.startswith("text/")
@@ -30,21 +30,24 @@ def analyze_file_content(file_path, summarizer):
             if len(content.strip()) == 0:
                 return None
 
-            # Truncate content if too long to avoid overhead
             truncated_content = content[:1000]
             summary = summarizer(
                 truncated_content, max_length=50, min_length=10, do_sample=False
             )
-            return summary[0]["summary_text"]
+            return str(summary[0]["summary_text"])
     except Exception as e:
         return f"Error analyzing file: {str(e)}"
 
 
 def generate_long_report(
-    directory_path, total_files, total_size, file_types, file_summaries
-):
+    directory_path: Union[str, Path],
+    total_files: int,
+    total_size: int,
+    file_types: Counter,
+    file_summaries: List[Tuple[str, str]],
+) -> str:
     """Generate a long descriptive text of the directory and its files."""
-    report_lines = []
+    report_lines: List[str] = []
     report_lines.append(f"Directory: {directory_path}")
     report_lines.append(f"Total number of files: {total_files}")
     report_lines.append(f"Total size (in MB): {total_size / (1024*1024):.2f}")
@@ -63,7 +66,7 @@ def generate_long_report(
     return "\n".join(report_lines)
 
 
-def process_file_stats(file_path):
+def process_file_stats(file_path: Path) -> Optional[Dict[str, Any]]:
     """Get basic statistics for a file."""
     try:
         stat = file_path.stat()
@@ -78,17 +81,19 @@ def process_file_stats(file_path):
         return None
 
 
-def format_size(size_bytes):
+def format_size(size_bytes: int) -> str:
     """Convert bytes to human readable format."""
     return f"{size_bytes / (1024*1024):.2f} MB"
 
 
-def process_directory_contents(directory_path, summarizer, year=None):
+def process_directory_contents(
+    directory_path: Union[str, Path], summarizer: Any, year: Optional[int] = None
+) -> Dict[str, Any]:
     """
     Process directory contents and return statistics.
     If year is specified, only process files from that year.
     """
-    stats = {
+    stats: Dict[str, Any] = {
         "total_files": 0,
         "total_size": 0,
         "file_types": Counter(),
@@ -97,8 +102,7 @@ def process_directory_contents(directory_path, summarizer, year=None):
         "file_summaries": [],
     }
 
-    # Skip directories that typically contain system files or large binary data
-    SKIP_DIRS = {
+    SKIP_DIRS: set[str] = {
         "node_modules",
         ".git",
         "venv",
@@ -113,46 +117,46 @@ def process_directory_contents(directory_path, summarizer, year=None):
         "Caches",
     }
 
-    # Only process these file types for summaries
-    SUMMARY_EXTENSIONS = {".txt", ".md", ".py", ".js", ".html", ".css", ".json", ".xml"}
+    SUMMARY_EXTENSIONS: set[str] = {
+        ".txt",
+        ".md",
+        ".py",
+        ".js",
+        ".html",
+        ".css",
+        ".json",
+        ".xml",
+    }
 
-    # First, count total files for progress bar
     total_files = sum(
         len(files)
         for root, dirs, files in os.walk(directory_path)
         if not any(skip_dir in root.split(os.sep) for skip_dir in SKIP_DIRS)
     )
 
-    # Create progress bar
     with tqdm(total=total_files, desc="Processing files", unit="file") as pbar:
         for root, dirs, files in os.walk(directory_path):
-            # Skip unwanted directories
             dirs[:] = [d for d in dirs if d not in SKIP_DIRS]
 
             for file in files:
                 file_path = Path(root) / file
 
-                # Skip files larger than 10MB
-                if file_path.stat().st_size > 10_000_000:  # 10MB
+                if file_path.stat().st_size > 10_000_000:
                     pbar.update(1)
                     continue
 
                 file_stats = process_file_stats(file_path)
-
-                # Update progress bar
                 pbar.update(1)
 
                 if not file_stats:
                     continue
 
-                # Skip if year is specified and file is not from that year
                 if year and not (
                     file_stats["modified_time"].year == year
                     or file_stats["created_time"].year == year
                 ):
                     continue
 
-                # Update statistics
                 stats["total_files"] += 1
                 stats["total_size"] += file_stats["size"]
                 stats["file_types"][file_stats["type"]] += 1
@@ -161,25 +165,23 @@ def process_directory_contents(directory_path, summarizer, year=None):
                 ] += 1
                 stats["largest_files"].append((file_stats["size"], file_path))
 
-                # Only get content summary for specific file types and if file is smaller than 1MB
                 if (
                     file_path.suffix.lower() in SUMMARY_EXTENSIONS
-                    and file_stats["size"] < 1_000_000  # 1MB
+                    and file_stats["size"] < 1_000_000
                 ):
                     summary = analyze_file_content(file_path, summarizer)
                     if summary:
                         stats["file_summaries"].append((file, summary))
 
-    # Sort and trim largest files
     stats["largest_files"].sort(reverse=True)
     stats["largest_files"] = stats["largest_files"][:5]
 
     return stats
 
 
-def generate_year_wrapped_report(stats, year):
+def generate_year_wrapped_report(stats: Dict[str, Any], year: int) -> str:
     """Generate a Year Wrapped style report from statistics."""
-    report = [f"\n🎉 Your {year} in Files 🎉"]
+    report: List[str] = [f"\n🎉 Your {year} in Files 🎉"]
 
     report.append("\n📊 By the Numbers:")
     report.append(f"- You created or modified {stats['total_files']} files")
@@ -205,9 +207,11 @@ def generate_year_wrapped_report(stats, year):
     return "\n".join(report)
 
 
-def generate_regular_report(stats, directory_path, summarizer):
+def generate_regular_report(
+    stats: Dict[str, Any], directory_path: Union[str, Path], summarizer: Any
+) -> str:
     """Generate a regular analysis report from statistics."""
-    report = ["=== Directory Analysis Report ==="]
+    report: List[str] = ["=== Directory Analysis Report ==="]
 
     report.append(f"\nTotal Files: {stats['total_files']}")
     report.append(f"Total Size: {format_size(stats['total_size'])}")
@@ -222,7 +226,6 @@ def generate_regular_report(stats, directory_path, summarizer):
             report.append(f"\n{file_name}:")
             report.append(f"Summary: {summary}")
 
-    # Generate a long textual report
     long_report = generate_long_report(
         directory_path,
         stats["total_files"],
@@ -231,7 +234,6 @@ def generate_regular_report(stats, directory_path, summarizer):
         stats["file_summaries"],
     )
 
-    # Final high-level summary
     report.append("\n\n=== Final Directory Summary (High-Level) ===")
     final_summary = summarizer(
         long_report, max_length=200, min_length=50, do_sample=False
@@ -241,11 +243,12 @@ def generate_regular_report(stats, directory_path, summarizer):
     return "\n".join(report)
 
 
-def analyze_directory(directory_path, output_file=None, year_wrapped=False):
-    """
-    Analyze a directory and its contents.
-    """
-    # Initialize the summarizer
+def analyze_directory(
+    directory_path: Union[str, Path],
+    output_file: Optional[str] = None,
+    year_wrapped: bool = False,
+) -> None:
+    """Analyze a directory and its contents."""
     print("Loading AI model...")
     summarizer = pipeline(
         "summarization",
@@ -256,16 +259,13 @@ def analyze_directory(directory_path, output_file=None, year_wrapped=False):
     year = datetime.now().year if year_wrapped else None
     stats = process_directory_contents(directory_path, summarizer, year)
 
-    # Generate appropriate report
     if year_wrapped:
-        output_text = generate_year_wrapped_report(stats, year)
+        output_text = generate_year_wrapped_report(stats, year or datetime.now().year)
     else:
         output_text = generate_regular_report(stats, directory_path, summarizer)
 
-    # Print to stdout
     print(output_text)
 
-    # Write to file if specified
     if output_file:
         try:
             with open(output_file, "w", encoding="utf-8") as f:
@@ -275,14 +275,13 @@ def analyze_directory(directory_path, output_file=None, year_wrapped=False):
             print(f"\nError writing to output file: {str(e)}")
 
 
-def main():
+def main() -> None:
     print("\n" + "=" * 50)
     print("📁 Directory Analysis Tool 📊")
     print("=" * 50 + "\n")
 
-    # Get directory path from user
     while True:
-        default_dir = str(Path.home())  # User's home directory as default
+        default_dir = str(Path.home())
         directory = input(
             f"📂 Enter the directory path to analyze (press Enter for {default_dir}): "
         ).strip()
@@ -292,7 +291,6 @@ def main():
             break
         print("❌ Error: Directory does not exist! Please try again.")
 
-    # Ask for analysis type
     print("\n📊 Available Analysis Types:")
     print(
         "  1. Regular Analysis  - Detailed directory statistics and content summaries"
@@ -307,7 +305,6 @@ def main():
 
     year_wrapped = analysis_type == "2"
 
-    # If year wrapped is selected, suggest analyzing home directory
     if year_wrapped and directory != str(Path.home()):
         print(
             f"\n💡 Tip: Year Wrapped works best with your home directory ({str(Path.home())})"
@@ -318,15 +315,12 @@ def main():
         if change.startswith("y"):
             directory = str(Path.home())
 
-    # Create 'out' directory if it doesn't exist
     os.makedirs("out", exist_ok=True)
 
-    # Generate default output path
     default_output = os.path.join(
         "out", datetime.now().strftime("%Y%m%d_%H%M%S") + ".txt"
     )
 
-    # Get output file path
     print("\n💾 Output File:")
     print(f"Default: {default_output}")
     output_file = input("Enter path (or press Enter for default): ").strip()
