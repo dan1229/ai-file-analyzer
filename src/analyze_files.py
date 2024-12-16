@@ -235,7 +235,12 @@ def main():
 
     # Get directory path from user
     while True:
-        directory = input("📂 Enter the directory path to analyze: ").strip()
+        default_dir = str(Path.home())  # User's home directory as default
+        directory = input(
+            f"📂 Enter the directory path to analyze (press Enter for {default_dir}): "
+        ).strip()
+        directory = directory if directory else default_dir
+
         if os.path.exists(directory):
             break
         print("❌ Error: Directory does not exist! Please try again.")
@@ -252,6 +257,17 @@ def main():
         print("❌ Please enter either 1 or 2")
 
     year_wrapped = analysis_type == "2"
+
+    # If year wrapped is selected, suggest analyzing home directory
+    if year_wrapped and directory != str(Path.home()):
+        print(
+            f"\n💡 Tip: Year Wrapped works best with your home directory ({str(Path.home())})"
+        )
+        change = input(
+            "Would you like to switch to analyzing your home directory? (y/n): "
+        ).lower()
+        if change.startswith("y"):
+            directory = str(Path.home())
 
     # Create 'out' directory if it doesn't exist
     os.makedirs("out", exist_ok=True)
