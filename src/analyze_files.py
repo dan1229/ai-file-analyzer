@@ -362,7 +362,7 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
     args = parser.parse_args(argv)
 
     if args.autorun:
-        directory = Path.cwd()
+        directory = str(Path.cwd())
         output = args.output or os.path.join(
             "out", datetime.now().strftime("%Y%m%d_%H%M%S") + ".txt"
         )
