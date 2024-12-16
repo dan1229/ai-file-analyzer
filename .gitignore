@@ -67,8 +67,6 @@ coverage/
 *.lcov.info
 
 # Miscellaneous
-*.lock
-*.lockfile
 *.pid
 *.seed
 *.pid.lock
