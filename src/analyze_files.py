@@ -258,8 +258,10 @@ def main():
 
     # Ask for analysis type
     print("\n📊 Available Analysis Types:")
-    print("  1. Regular Analysis - Detailed directory statistics and content summaries")
-    print("  2. Year Wrapped    - Spotify-style yearly file activity overview")
+    print(
+        "  1. Regular Analysis  - Detailed directory statistics and content summaries"
+    )
+    print("  2. Year Wrapped      - Spotify-style yearly file activity overview")
 
     while True:
         analysis_type = input("\n🔍 Choose analysis type (1 or 2): ").strip()
@@ -288,11 +290,10 @@ def main():
         "out", datetime.now().strftime("%Y%m%d_%H%M%S") + ".txt"
     )
 
-    # Get output file path (optional)
-    print("\n💾 Output Options:")
-    print(f"  - Press Enter to use default path: {default_output}")
-    print("  - Or enter a custom file path to save the results")
-    output_file = input("\n📄 Enter output file path (optional): ").strip()
+    # Get output file path
+    print("\n💾 Output File:")
+    print(f"Default: {default_output}")
+    output_file = input("Enter path (or press Enter for default): ").strip()
     output_file = output_file if output_file else default_output
 
     print("\n" + "=" * 50)
