@@ -1,13 +1,19 @@
-import os
 from pathlib import Path
 import mimetypes
 from collections import Counter
-from transformers import pipeline  # type: ignore[import-untyped]
 import torch
 from datetime import datetime
 from tqdm import tqdm
 from typing import Dict, List, Tuple, Optional, Union, Any, Sequence
 import argparse
+
+# Configure PyTorch to use CPU only
+import os
+
+os.environ["CUDA_VISIBLE_DEVICES"] = ""
+
+# Now import transformers after forcing CPU mode
+from transformers import pipeline  # type: ignore[import-untyped]
 
 
 def get_file_type(file_path: Union[str, Path]) -> str:
