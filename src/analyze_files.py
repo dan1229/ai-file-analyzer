@@ -97,14 +97,46 @@ def process_directory_contents(directory_path, summarizer, year=None):
         "file_summaries": [],
     }
 
+    # Skip directories that typically contain system files or large binary data
+    SKIP_DIRS = {
+        "node_modules",
+        ".git",
+        "venv",
+        "env",
+        "__pycache__",
+        "Library",
+        "Applications",
+        ".npm",
+        ".cache",
+        "AppData",
+        "Cache",
+        "Caches",
+    }
+
+    # Only process these file types for summaries
+    SUMMARY_EXTENSIONS = {".txt", ".md", ".py", ".js", ".html", ".css", ".json", ".xml"}
+
     # First, count total files for progress bar
-    total_files = sum(len(files) for _, _, files in os.walk(directory_path))
+    total_files = sum(
+        len(files)
+        for root, dirs, files in os.walk(directory_path)
+        if not any(skip_dir in root.split(os.sep) for skip_dir in SKIP_DIRS)
+    )
 
     # Create progress bar
     with tqdm(total=total_files, desc="Processing files", unit="file") as pbar:
-        for root, _, files in os.walk(directory_path):
+        for root, dirs, files in os.walk(directory_path):
+            # Skip unwanted directories
+            dirs[:] = [d for d in dirs if d not in SKIP_DIRS]
+
             for file in files:
                 file_path = Path(root) / file
+
+                # Skip files larger than 10MB
+                if file_path.stat().st_size > 10_000_000:  # 10MB
+                    pbar.update(1)
+                    continue
+
                 file_stats = process_file_stats(file_path)
 
                 # Update progress bar
@@ -129,10 +161,14 @@ def process_directory_contents(directory_path, summarizer, year=None):
                 ] += 1
                 stats["largest_files"].append((file_stats["size"], file_path))
 
-                # Get content summary if possible
-                summary = analyze_file_content(file_path, summarizer)
-                if summary:
-                    stats["file_summaries"].append((file, summary))
+                # Only get content summary for specific file types and if file is smaller than 1MB
+                if (
+                    file_path.suffix.lower() in SUMMARY_EXTENSIONS
+                    and file_stats["size"] < 1_000_000  # 1MB
+                ):
+                    summary = analyze_file_content(file_path, summarizer)
+                    if summary:
+                        stats["file_summaries"].append((file, summary))
 
     # Sort and trim largest files
     stats["largest_files"].sort(reverse=True)
