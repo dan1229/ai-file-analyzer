@@ -62,100 +62,141 @@ def generate_long_report(
     return "\n".join(report_lines)
 
 
-def analyze_year_wrapped(directory_path, summarizer, year=None):
-    """Generate a 'Year Wrapped' style analysis of files from the specified year."""
-    # Use current year if not specified
-    year = year or datetime.now().year
+def process_file_stats(file_path):
+    """Get basic statistics for a file."""
+    try:
+        stat = file_path.stat()
+        return {
+            "size": stat.st_size,
+            "modified_time": datetime.fromtimestamp(stat.st_mtime),
+            "created_time": datetime.fromtimestamp(stat.st_ctime),
+            "type": get_file_type(file_path),
+        }
+    except Exception as e:
+        print(f"Error processing {file_path}: {str(e)}")
+        return None
 
-    print(f"\n=== {year} Wrapped ===")
 
-    year_stats = {
+def format_size(size_bytes):
+    """Convert bytes to human readable format."""
+    return f"{size_bytes / (1024*1024):.2f} MB"
+
+
+def process_directory_contents(directory_path, summarizer, year=None):
+    """
+    Process directory contents and return statistics.
+    If year is specified, only process files from that year.
+    """
+    stats = {
         "total_files": 0,
         "total_size": 0,
-        "busiest_month": Counter(),
         "file_types": Counter(),
-        "largest_files": [],  # Will store (size, path) tuples
-        "most_edited_files": [],  # Will store (edit_count, path) tuples
-        "summaries": [],
+        "monthly_activity": Counter(),
+        "largest_files": [],
+        "file_summaries": [],
     }
 
-    # Walk through directory
     for root, _, files in os.walk(directory_path):
         for file in files:
             file_path = Path(root) / file
+            file_stats = process_file_stats(file_path)
 
-            try:
-                # Get file stats
-                stat = file_path.stat()
-                modified_time = datetime.fromtimestamp(stat.st_mtime)
-                created_time = datetime.fromtimestamp(stat.st_ctime)
+            if not file_stats:
+                continue
 
-                # Only process files from the specified year
-                if modified_time.year == year or created_time.year == year:
-                    year_stats["total_files"] += 1
-                    year_stats["total_size"] += stat.st_size
+            # Skip if year is specified and file is not from that year
+            if year and not (
+                file_stats["modified_time"].year == year
+                or file_stats["created_time"].year == year
+            ):
+                continue
 
-                    # Track monthly activity
-                    year_stats["busiest_month"][modified_time.strftime("%B")] += 1
+            # Update statistics
+            stats["total_files"] += 1
+            stats["total_size"] += file_stats["size"]
+            stats["file_types"][file_stats["type"]] += 1
+            stats["monthly_activity"][file_stats["modified_time"].strftime("%B")] += 1
+            stats["largest_files"].append((file_stats["size"], file_path))
 
-                    # Track file types
-                    file_type = get_file_type(file_path)
-                    year_stats["file_types"][file_type] += 1
-
-                    # Track large files
-                    year_stats["largest_files"].append((stat.st_size, file_path))
-
-                    # Get content summary for text files
-                    summary = analyze_file_content(file_path, summarizer)
-                    if summary:
-                        year_stats["summaries"].append((file, summary))
-
-            except Exception as e:
-                print(f"Error processing {file}: {str(e)}")
+            # Get content summary if possible
+            summary = analyze_file_content(file_path, summarizer)
+            if summary:
+                stats["file_summaries"].append((file, summary))
 
     # Sort and trim largest files
-    year_stats["largest_files"].sort(reverse=True)
-    year_stats["largest_files"] = year_stats["largest_files"][:5]
+    stats["largest_files"].sort(reverse=True)
+    stats["largest_files"] = stats["largest_files"][:5]
 
-    # Generate wrapped report
-    wrapped_report = [f"\n🎉 Your {year} in Files 🎉"]
+    return stats
 
-    wrapped_report.append("\n📊 By the Numbers:")
-    wrapped_report.append(
-        f"- You created or modified {year_stats['total_files']} files"
+
+def generate_year_wrapped_report(stats, year):
+    """Generate a Year Wrapped style report from statistics."""
+    report = [f"\n🎉 Your {year} in Files 🎉"]
+
+    report.append("\n📊 By the Numbers:")
+    report.append(f"- You created or modified {stats['total_files']} files")
+    report.append(f"- Total size: {format_size(stats['total_size'])}")
+
+    report.append("\n📅 Your Busiest Months:")
+    for month, count in stats["monthly_activity"].most_common(3):
+        report.append(f"- {month}: {count} files")
+
+    report.append("\n📁 Your Top File Types:")
+    for ftype, count in stats["file_types"].most_common(5):
+        report.append(f"- {ftype}: {count} files")
+
+    report.append("\n🏋️ Your Largest Files:")
+    for size, path in stats["largest_files"]:
+        report.append(f"- {path.name}: {format_size(size)}")
+
+    if stats["file_summaries"]:
+        report.append("\n📝 Highlights from Your Text Files:")
+        for _, summary in stats["file_summaries"][:5]:
+            report.append(f"- {summary}")
+
+    return "\n".join(report)
+
+
+def generate_regular_report(stats, directory_path, summarizer):
+    """Generate a regular analysis report from statistics."""
+    report = ["=== Directory Analysis Report ==="]
+
+    report.append(f"\nTotal Files: {stats['total_files']}")
+    report.append(f"Total Size: {format_size(stats['total_size'])}")
+
+    report.append("\nFile Types Distribution:")
+    for file_type, count in stats["file_types"].most_common():
+        report.append(f"- {file_type}: {count} files")
+
+    if stats["file_summaries"]:
+        report.append("\nFile Content Summaries:")
+        for file_name, summary in stats["file_summaries"]:
+            report.append(f"\n{file_name}:")
+            report.append(f"Summary: {summary}")
+
+    # Generate a long textual report
+    long_report = generate_long_report(
+        directory_path,
+        stats["total_files"],
+        stats["total_size"],
+        stats["file_types"],
+        stats["file_summaries"],
     )
-    wrapped_report.append(
-        f"- Total size: {year_stats['total_size'] / (1024*1024):.2f} MB"
-    )
 
-    wrapped_report.append("\n📅 Your Busiest Months:")
-    for month, count in year_stats["busiest_month"].most_common(3):
-        wrapped_report.append(f"- {month}: {count} files")
+    # Final high-level summary
+    report.append("\n\n=== Final Directory Summary (High-Level) ===")
+    final_summary = summarizer(
+        long_report, max_length=200, min_length=50, do_sample=False
+    )[0]["summary_text"]
+    report.append(final_summary)
 
-    wrapped_report.append("\n📁 Your Top File Types:")
-    for ftype, count in year_stats["file_types"].most_common(5):
-        wrapped_report.append(f"- {ftype}: {count} files")
-
-    wrapped_report.append("\n🏋️ Your Largest Files:")
-    for size, path in year_stats["largest_files"]:
-        wrapped_report.append(f"- {path.name}: {size / (1024*1024):.2f} MB")
-
-    if year_stats["summaries"]:
-        wrapped_report.append("\n📝 Highlights from Your Text Files:")
-        for _, summary in year_stats["summaries"][:5]:
-            wrapped_report.append(f"- {summary}")
-
-    return "\n".join(wrapped_report)
+    return "\n".join(report)
 
 
 def analyze_directory(directory_path, output_file=None, year_wrapped=False):
     """
     Analyze a directory and its contents.
-
-    Args:
-        directory_path (str): Path to the directory to analyze
-        output_file (str, optional): Path to save the output report
-        year_wrapped (bool): Whether to perform year wrapped analysis
     """
     # Initialize the summarizer
     print("Loading AI model...")
@@ -165,68 +206,14 @@ def analyze_directory(directory_path, output_file=None, year_wrapped=False):
         device=0 if torch.cuda.is_available() else -1,
     )
 
-    # Generate output content
-    output_content = []
+    year = datetime.now().year if year_wrapped else None
+    stats = process_directory_contents(directory_path, summarizer, year)
 
+    # Generate appropriate report
     if year_wrapped:
-        # Only do Year Wrapped analysis
-        wrapped_report = analyze_year_wrapped(directory_path, summarizer)
-        output_content.append(wrapped_report)
+        output_text = generate_year_wrapped_report(stats, year)
     else:
-        # Do regular directory analysis
-        output_content = ["=== Directory Analysis Report ==="]
-
-        # Collect directory statistics
-        total_files = 0
-        file_types = Counter()
-        file_summaries = []
-        total_size = 0
-
-        print(f"\nAnalyzing directory: {directory_path}")
-
-        # Walk through directory
-        for root, dirs, files in os.walk(directory_path):
-            for file in files:
-                file_path = Path(root) / file
-                total_files += 1
-
-                # Get file stats
-                file_type = get_file_type(file_path)
-                file_types[file_type] += 1
-                total_size += file_path.stat().st_size
-
-                # Get file summary if possible
-                summary = analyze_file_content(file_path, summarizer)
-                if summary:
-                    file_summaries.append((file, summary))
-
-        output_content.append(f"\nTotal Files: {total_files}")
-        output_content.append(f"Total Size: {total_size / (1024*1024):.2f} MB")
-
-        output_content.append("\nFile Types Distribution:")
-        for file_type, count in file_types.most_common():
-            output_content.append(f"- {file_type}: {count} files")
-
-        if file_summaries:
-            output_content.append("\nFile Content Summaries:")
-            for file_name, summary in file_summaries:
-                output_content.append(f"\n{file_name}:")
-                output_content.append(f"Summary: {summary}")
-
-        # Generate a long textual report of everything
-        long_report = generate_long_report(
-            directory_path, total_files, total_size, file_types, file_summaries
-        )
-
-        # Produce a final high-level summary
-        output_content.append("\n\n=== Final Directory Summary (High-Level) ===")
-        final_summary = summarizer(
-            long_report, max_length=200, min_length=50, do_sample=False
-        )[0]["summary_text"]
-        output_content.append(final_summary)
-
-    # Convert output_content to string
-    output_text = "\n".join(output_content)
+        output_text = generate_regular_report(stats, directory_path, summarizer)
 
     # Print to stdout
     print(output_text)
@@ -266,12 +253,20 @@ def main():
 
     year_wrapped = analysis_type == "2"
 
+    # Create 'out' directory if it doesn't exist
+    os.makedirs("out", exist_ok=True)
+
+    # Generate default output path
+    default_output = os.path.join(
+        "out", datetime.now().strftime("%Y%m%d_%H%M%S") + ".txt"
+    )
+
     # Get output file path (optional)
     print("\n💾 Output Options:")
-    print("  - Press Enter to display results in terminal only")
-    print("  - Or enter a file path to save the results")
+    print(f"  - Press Enter to use default path: {default_output}")
+    print("  - Or enter a custom file path to save the results")
     output_file = input("\n📄 Enter output file path (optional): ").strip()
-    output_file = output_file if output_file else None
+    output_file = output_file if output_file else default_output
 
     print("\n" + "=" * 50)
     print("🚀 Starting Analysis...")

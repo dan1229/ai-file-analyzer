@@ -1,6 +1,10 @@
 # macOS
 .DS_Store
 
+# output
+output/
+out/
+
 # Windows
 Thumbs.db
 ehthumbs.db
