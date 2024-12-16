@@ -310,7 +310,7 @@ def analyze_directory(
     # Try to use CUDA, but fall back to CPU if not available
     try:
         device = 0 if torch.cuda.is_available() else -1
-    except Exception as e:
+    except Exception:
         device = -1  # Force CPU if there's any error with CUDA
 
     try:
