@@ -25,6 +25,9 @@ add ability for users to choose prompt / output
 - or what!?
 
 
+
+add 'year in review' type of analysis
+
 -------------------------------------------------------
 
 ##### Copyright 2024 © Daniel Nazarian.

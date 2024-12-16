@@ -61,8 +61,14 @@ def generate_long_report(
     return "\n".join(report_lines)
 
 
-def analyze_directory(directory_path):
-    """Analyze a directory and its contents."""
+def analyze_directory(directory_path, output_file=None):
+    """
+    Analyze a directory and its contents.
+
+    Args:
+        directory_path (str): Path to the directory to analyze
+        output_file (str, optional): Path to save the output report
+    """
     # Initialize the summarizer
     print("Loading AI model...")
     summarizer = pipeline(
@@ -95,32 +101,47 @@ def analyze_directory(directory_path):
             if summary:
                 file_summaries.append((file, summary))
 
-    # Print initial report
-    print("\n=== Directory Analysis Report ===")
-    print(f"\nTotal Files: {total_files}")
-    print(f"Total Size: {total_size / (1024*1024):.2f} MB")
+    # Generate output content
+    output_content = ["=== Directory Analysis Report ==="]
+    output_content.append(f"\nTotal Files: {total_files}")
+    output_content.append(f"Total Size: {total_size / (1024*1024):.2f} MB")
 
-    print("\nFile Types Distribution:")
+    output_content.append("\nFile Types Distribution:")
     for file_type, count in file_types.most_common():
-        print(f"- {file_type}: {count} files")
+        output_content.append(f"- {file_type}: {count} files")
 
     if file_summaries:
-        print("\nFile Content Summaries:")
+        output_content.append("\nFile Content Summaries:")
         for file_name, summary in file_summaries:
-            print(f"\n{file_name}:")
-            print(f"Summary: {summary}")
+            output_content.append(f"\n{file_name}:")
+            output_content.append(f"Summary: {summary}")
 
     # Generate a long textual report of everything
     long_report = generate_long_report(
         directory_path, total_files, total_size, file_types, file_summaries
     )
 
-    # Now produce a final high-level summary of the entire directory
-    print("\n\n=== Final Directory Summary (High-Level) ===")
+    # Produce a final high-level summary
+    output_content.append("\n\n=== Final Directory Summary (High-Level) ===")
     final_summary = summarizer(
         long_report, max_length=200, min_length=50, do_sample=False
     )[0]["summary_text"]
-    print(final_summary)
+    output_content.append(final_summary)
+
+    # Convert output_content to string
+    output_text = "\n".join(output_content)
+
+    # Print to stdout
+    print(output_text)
+
+    # Write to file if specified
+    if output_file:
+        try:
+            with open(output_file, "w", encoding="utf-8") as f:
+                f.write(output_text)
+            print(f"\nOutput has been saved to: {output_file}")
+        except Exception as e:
+            print(f"\nError writing to output file: {str(e)}")
 
 
 def main():
@@ -131,7 +152,11 @@ def main():
         print("Error: Directory does not exist!")
         return
 
-    analyze_directory(directory)
+    # Get output file path (optional)
+    output_file = input("Enter output file path (press Enter to skip): ").strip()
+    output_file = output_file if output_file else None
+
+    analyze_directory(directory, output_file)
 
 
 if __name__ == "__main__":
