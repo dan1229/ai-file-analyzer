@@ -60,7 +60,7 @@ jobs:
         pipenv install --dev
         
     - name: Type check with Mypy
-      run: pipenv run mypy src --ignore-missing-imports
+      run: pipenv run mypy src --config=mypy.ini
 
   run-script:
     runs-on: ubuntu-latest
