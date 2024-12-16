@@ -242,22 +242,40 @@ def analyze_directory(directory_path, output_file=None, year_wrapped=False):
 
 
 def main():
-    # Get directory path from user
-    directory = input("Enter the directory path to analyze: ")
+    print("\n" + "=" * 50)
+    print("📁 Directory Analysis Tool 📊")
+    print("=" * 50 + "\n")
 
-    if not os.path.exists(directory):
-        print("Error: Directory does not exist!")
-        return
+    # Get directory path from user
+    while True:
+        directory = input("📂 Enter the directory path to analyze: ").strip()
+        if os.path.exists(directory):
+            break
+        print("❌ Error: Directory does not exist! Please try again.")
 
     # Ask for analysis type
-    analysis_type = input(
-        "Choose analysis type (1 for regular analysis, 2 for Year Wrapped): "
-    )
+    print("\n📊 Available Analysis Types:")
+    print("  1. Regular Analysis - Detailed directory statistics and content summaries")
+    print("  2. Year Wrapped    - Spotify-style yearly file activity overview")
+
+    while True:
+        analysis_type = input("\n🔍 Choose analysis type (1 or 2): ").strip()
+        if analysis_type in ["1", "2"]:
+            break
+        print("❌ Please enter either 1 or 2")
+
     year_wrapped = analysis_type == "2"
 
     # Get output file path (optional)
-    output_file = input("Enter output file path (press Enter to skip): ").strip()
+    print("\n💾 Output Options:")
+    print("  - Press Enter to display results in terminal only")
+    print("  - Or enter a file path to save the results")
+    output_file = input("\n📄 Enter output file path (optional): ").strip()
     output_file = output_file if output_file else None
+
+    print("\n" + "=" * 50)
+    print("🚀 Starting Analysis...")
+    print("=" * 50 + "\n")
 
     analyze_directory(directory, output_file, year_wrapped)
 
