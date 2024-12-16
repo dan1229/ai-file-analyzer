@@ -2,7 +2,12 @@ import os
 from pathlib import Path
 import mimetypes
 from collections import Counter
-from transformers import pipeline  # type: ignore[import-untyped]
+
+try:
+    from transformers import pipeline  # type: ignore[import-untyped]
+except ImportError:
+    print("Transformers library not found. Skipping ML-based analysis.")
+
 import torch
 from datetime import datetime
 from tqdm import tqdm
@@ -368,13 +373,13 @@ def autorun(
         raise ValueError(f"Directory does not exist: {directory}")
 
     # Basic file statistics without ML analysis
-    stats = {
+    stats: Dict[str, Any] = {
         "total_files": 0,
         "total_size": 0,
         "file_types": Counter(),
         "monthly_activity": Counter(),
-        "largest_files": [],
-        "file_summaries": [],  # Empty since we skip ML analysis
+        "largest_files": [],  # List[Tuple[int, Path]]
+        "file_summaries": [],  # List[Tuple[str, str]]
     }
 
     for root, dirs, files in os.walk(directory):
@@ -393,8 +398,10 @@ def autorun(
             except Exception as e:
                 print(f"Error processing {file_path}: {str(e)}")
 
-    stats["largest_files"].sort(reverse=True)
-    stats["largest_files"] = stats["largest_files"][:5]
+    # Type assertion to help mypy understand the type
+    largest_files = stats["largest_files"]
+    largest_files.sort(reverse=True)
+    stats["largest_files"] = largest_files[:5]
 
     # Generate basic report
     if year_wrapped:
@@ -402,10 +409,10 @@ def autorun(
     else:
         output_text = generate_long_report(
             directory,
-            stats["total_files"],
-            stats["total_size"],
-            stats["file_types"],
-            stats["file_summaries"],
+            int(stats["total_files"]),  # explicit type conversion
+            int(stats["total_size"]),  # explicit type conversion
+            stats["file_types"],  # Counter is already correct type
+            stats["file_summaries"],  # List[Tuple[str, str]]
         )
 
     # Save output
