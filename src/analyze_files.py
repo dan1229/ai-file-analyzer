@@ -278,7 +278,7 @@ def analyze_directory(
 
 def autorun(
     directory: str,
-    output_file: str,
+    output: str,
     year_wrapped: bool = False,
 ) -> None:
     """
@@ -286,18 +286,18 @@ def autorun(
 
     Args:
         directory: Path to the directory to analyze
-        output_file: Path where to save the output
+        output: Path where to save the output
         year_wrapped: Whether to generate a year-wrapped style report
     """
     if not os.path.exists(directory):
         raise ValueError(f"Directory does not exist: {directory}")
 
-    analyze_directory(directory, output_file, year_wrapped)
+    analyze_directory(directory, output, year_wrapped)
 
 
 def main(argv: Optional[Sequence[str]] = None) -> None:
     parser = argparse.ArgumentParser(description="Directory Analysis Tool")
-    parser.add_argument("--ci", action="store_true", help="Run in CI mode")
+    parser.add_argument("--autorun", action="store_true", help="Run in autorun mode")
     parser.add_argument("--directory", type=str, help="Directory to analyze")
     parser.add_argument("--output", type=str, help="Output file path")
     parser.add_argument(
@@ -306,10 +306,13 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
 
     args = parser.parse_args(argv)
 
-    if args.ci:
-        if not args.directory or not args.output:
-            raise ValueError("In CI mode, --directory and --output are required")
-        autorun(args.directory, args.output, args.year_wrapped)
+    if args.autorun:
+        directory = args.directory or str(Path.home())
+        output = args.output or os.path.join(
+            "out", datetime.now().strftime("%Y%m%d_%H%M%S") + ".txt"
+        )
+        os.makedirs(os.path.dirname(output), exist_ok=True)
+        autorun(directory, output, args.year_wrapped)
         return
 
     # Original interactive code
