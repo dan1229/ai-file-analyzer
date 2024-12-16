@@ -306,11 +306,27 @@ def analyze_directory(
 ) -> None:
     """Analyze a directory and its contents."""
     print("Loading AI model...")
-    summarizer = pipeline(
-        "summarization",
-        model="facebook/bart-large-cnn",
-        device=0 if torch.cuda.is_available() else -1,
-    )
+
+    # Try to use CUDA, but fall back to CPU if not available
+    try:
+        device = 0 if torch.cuda.is_available() else -1
+    except Exception as e:
+        device = -1  # Force CPU if there's any error with CUDA
+
+    try:
+        summarizer = pipeline(
+            "summarization",
+            model="facebook/bart-large-cnn",
+            device=device,
+        )
+    except Exception as e:
+        print(f"Error loading model: {str(e)}")
+        print("Falling back to CPU-only mode...")
+        summarizer = pipeline(
+            "summarization",
+            model="facebook/bart-large-cnn",
+            device=-1,
+        )
 
     year = datetime.now().year if year_wrapped else None
     stats = process_directory_contents(directory_path, summarizer, year)
