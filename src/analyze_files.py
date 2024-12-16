@@ -3,10 +3,7 @@ from pathlib import Path
 import mimetypes
 from collections import Counter
 
-try:
-    from transformers import pipeline  # type: ignore[import-untyped]
-except ImportError:
-    print("Transformers library not found. Skipping ML-based analysis.")
+from transformers import pipeline  # type: ignore[import-untyped]
 
 import torch
 from datetime import datetime
@@ -96,7 +93,9 @@ def format_size(size_bytes: int) -> str:
 
 
 def process_directory_contents(
-    directory_path: Union[str, Path], summarizer: Any, year: Optional[int] = None
+    directory_path: Union[str, Path],
+    summarizer: Optional[Any],
+    year: Optional[int] = None,
 ) -> Dict[str, Any]:
     """
     Process directory contents and return statistics.
@@ -232,6 +231,7 @@ def process_directory_contents(
                 if (
                     file_path.suffix.lower() in SUMMARY_EXTENSIONS
                     and file_stats["size"] < 1_000_000
+                    and summarizer is not None
                 ):
                     summary = analyze_file_content(file_path, summarizer)
                     if summary:
