@@ -26,9 +26,6 @@ add ability for users to choose prompt / output
 
 
 
-what to do with main.py and related files?
-- should analyze_files.py be the main file?
-
 
 add 'year in review' type of analysis
 
