@@ -5,6 +5,7 @@ from collections import Counter
 from transformers import pipeline
 import torch
 from datetime import datetime
+from tqdm import tqdm
 
 
 def get_file_type(file_path):
@@ -96,32 +97,42 @@ def process_directory_contents(directory_path, summarizer, year=None):
         "file_summaries": [],
     }
 
-    for root, _, files in os.walk(directory_path):
-        for file in files:
-            file_path = Path(root) / file
-            file_stats = process_file_stats(file_path)
+    # First, count total files for progress bar
+    total_files = sum(len(files) for _, _, files in os.walk(directory_path))
 
-            if not file_stats:
-                continue
+    # Create progress bar
+    with tqdm(total=total_files, desc="Processing files", unit="file") as pbar:
+        for root, _, files in os.walk(directory_path):
+            for file in files:
+                file_path = Path(root) / file
+                file_stats = process_file_stats(file_path)
 
-            # Skip if year is specified and file is not from that year
-            if year and not (
-                file_stats["modified_time"].year == year
-                or file_stats["created_time"].year == year
-            ):
-                continue
+                # Update progress bar
+                pbar.update(1)
 
-            # Update statistics
-            stats["total_files"] += 1
-            stats["total_size"] += file_stats["size"]
-            stats["file_types"][file_stats["type"]] += 1
-            stats["monthly_activity"][file_stats["modified_time"].strftime("%B")] += 1
-            stats["largest_files"].append((file_stats["size"], file_path))
+                if not file_stats:
+                    continue
 
-            # Get content summary if possible
-            summary = analyze_file_content(file_path, summarizer)
-            if summary:
-                stats["file_summaries"].append((file, summary))
+                # Skip if year is specified and file is not from that year
+                if year and not (
+                    file_stats["modified_time"].year == year
+                    or file_stats["created_time"].year == year
+                ):
+                    continue
+
+                # Update statistics
+                stats["total_files"] += 1
+                stats["total_size"] += file_stats["size"]
+                stats["file_types"][file_stats["type"]] += 1
+                stats["monthly_activity"][
+                    file_stats["modified_time"].strftime("%B")
+                ] += 1
+                stats["largest_files"].append((file_stats["size"], file_path))
+
+                # Get content summary if possible
+                summary = analyze_file_content(file_path, summarizer)
+                if summary:
+                    stats["file_summaries"].append((file, summary))
 
     # Sort and trim largest files
     stats["largest_files"].sort(reverse=True)
