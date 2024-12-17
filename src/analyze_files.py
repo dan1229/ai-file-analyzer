@@ -3,7 +3,10 @@ from pathlib import Path
 import mimetypes
 from collections import Counter
 
-from transformers import pipeline  # type: ignore[import-untyped]
+try:
+    from transformers import pipeline  # type: ignore[import-untyped]
+except ImportError:
+    print("Transformers library not found. Skipping ML-based analysis.")
 
 import torch
 from datetime import datetime
