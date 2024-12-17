@@ -5,7 +5,7 @@ from collections import Counter
 
 try:
     from transformers import pipeline  # type: ignore[import-untyped]
-except ImportError:
+except Exception as e:
     print("Transformers library not found. Skipping ML-based analysis.")
 
 import torch
