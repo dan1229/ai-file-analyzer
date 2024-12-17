@@ -2,12 +2,7 @@ import os
 from pathlib import Path
 import mimetypes
 from collections import Counter
-
-try:
-    from transformers import pipeline  # type: ignore[import-untyped]
-except Exception:
-    print("Transformers library not found. Skipping ML-based analysis.")
-
+from transformers import pipeline  # type: ignore[import-untyped]
 import torch
 from datetime import datetime
 from tqdm import tqdm
@@ -451,74 +446,85 @@ def autorun(
 
 def main(argv: Optional[Sequence[str]] = None) -> None:
     parser = argparse.ArgumentParser(description="Directory Analysis Tool")
-    parser.add_argument("--autorun", action="store_true", help="Run in autorun mode")
     parser.add_argument("--directory", type=str, help="Directory to analyze")
     parser.add_argument("--output", type=str, help="Output file path")
     parser.add_argument(
-        "--year-wrapped", action="store_true", help="Generate year-wrapped report"
+        "--year-wrapped",
+        action="store_true",
+        help="Generate year-wrapped report",
+        default=None,
     )
 
     args = parser.parse_args(argv)
 
-    if args.autorun:
-        directory = str(Path.cwd())
-        output = args.output or os.path.join(
-            "out", datetime.now().strftime("%Y%m%d_%H%M%S") + ".txt"
-        )
-        os.makedirs(os.path.dirname(output), exist_ok=True)
-        autorun(directory, output, args.year_wrapped)
-        return
-
-    # Original interactive code
     print("\n" + "=" * 50)
     print("📁 Directory Analysis Tool 📊")
     print("=" * 50 + "\n")
 
-    while True:
-        default_dir = str(Path.home())
-        directory = input(
-            f"📂 Enter the directory path to analyze (press Enter for {default_dir}): "
-        ).strip()
-        directory = directory if directory else default_dir
+    print(args)
 
-        if os.path.exists(directory):
-            break
-        print("❌ Error: Directory does not exist! Please try again.")
+    # Handle directory
+    if args.directory:
+        directory = args.directory
+        if not os.path.exists(directory):
+            print("❌ Error: Specified directory does not exist!")
+            return
+    else:
+        while True:
+            default_dir = str(Path.home())
+            directory = input(
+                f"📂 Enter the directory path to analyze (press Enter for {default_dir}): "
+            ).strip()
+            directory = directory if directory else default_dir
 
-    print("\n📊 Available Analysis Types:")
-    print(
-        "  1. Regular Analysis  - Detailed directory statistics and content summaries"
-    )
-    print("  2. Year Wrapped      - Spotify-style yearly file activity overview")
+            if os.path.exists(directory):
+                break
+            print("❌ Error: Directory does not exist! Please try again.")
 
-    while True:
-        analysis_type = input("\n🔍 Choose analysis type (1 or 2): ").strip()
-        if analysis_type in ["1", "2"]:
-            break
-        print("❌ Please enter either 1 or 2")
+    # Handle year-wrapped flag
+    if args.year_wrapped is not None:
+        year_wrapped = args.year_wrapped
+    else:
+        print("\n📊 Available Analysis Types:")
+        print(
+            "  1. Regular Analysis  - Detailed directory statistics and content summaries"
+        )
+        print(
+            "  2. Year Wrapped      - Spotify-Wrapped style yearly file activity overview"
+        )
 
-    year_wrapped = analysis_type == "2"
+        while True:
+            analysis_type = input("\n🔍 Choose analysis type (1 or 2): ").strip()
+            if analysis_type in ["1", "2"]:
+                break
+            print("❌ Please enter either 1 or 2")
 
+        year_wrapped = analysis_type == "2"
+
+    # Show year-wrapped tip if applicable
     if year_wrapped and directory != str(Path.home()):
         print(
             f"\n💡 Tip: Year Wrapped works best with your home directory ({str(Path.home())})"
         )
-        change = input(
-            "Would you like to switch to analyzing your home directory? (y/n): "
-        ).lower()
-        if change.startswith("y"):
-            directory = str(Path.home())
+        if not args.directory:  # Only ask if directory wasn't provided via CLI
+            change = input(
+                "Would you like to switch to analyzing your home directory? (y/n): "
+            ).lower()
+            if change.startswith("y"):
+                directory = str(Path.home())
 
-    os.makedirs("out", exist_ok=True)
-
-    default_output = os.path.join(
-        "out", datetime.now().strftime("%Y%m%d_%H%M%S") + ".txt"
-    )
-
-    print("\n💾 Output File:")
-    print(f"Default: {default_output}")
-    output_file = input("Enter path (or press Enter for default): ").strip()
-    output_file = output_file if output_file else default_output
+    # Handle output file
+    if args.output:
+        output_file = args.output
+    else:
+        os.makedirs("out", exist_ok=True)
+        default_output = os.path.join(
+            "out", datetime.now().strftime("%Y%m%d_%H%M%S") + ".txt"
+        )
+        print("\n💾 Output File:")
+        print(f"Default: {default_output}")
+        output_file = input("Enter path (or press Enter for default): ").strip()
+        output_file = output_file if output_file else default_output
 
     print("\n" + "=" * 50)
     print("🚀 Starting Analysis...")
