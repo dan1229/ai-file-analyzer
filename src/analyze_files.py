@@ -5,7 +5,7 @@ from collections import Counter
 
 try:
     from transformers import pipeline  # type: ignore[import-untyped]
-except Exception as e:
+except Exception:
     print("Transformers library not found. Skipping ML-based analysis.")
 
 import torch
@@ -16,6 +16,10 @@ import argparse
 
 
 os.environ["CUDA_VISIBLE_DEVICES"] = ""
+
+
+# Add file limit constant
+MAX_FILES_TO_PROCESS = 10000
 
 
 def get_file_type(file_path: Union[str, Path]) -> str:
@@ -192,11 +196,28 @@ def process_directory_contents(
         if not any(skip_dir in root.split(os.sep) for skip_dir in SKIP_DIRS)
     )
 
-    with tqdm(total=total_files, desc="Processing files", unit="file") as pbar:
+    if total_files > MAX_FILES_TO_PROCESS:
+        print(
+            f"\n⚠️ Warning: Found {total_files:,} files. Analysis will be limited to the first {MAX_FILES_TO_PROCESS:,} files."
+        )
+        print("Consider analyzing a more specific directory for complete results.")
+
+    files_processed = 0
+    with tqdm(
+        total=min(total_files, MAX_FILES_TO_PROCESS),
+        desc="Processing files",
+        unit="file",
+    ) as pbar:
         for root, dirs, files in os.walk(directory_path):
+            if files_processed >= MAX_FILES_TO_PROCESS:
+                break
+
             dirs[:] = [d for d in dirs if d not in SKIP_DIRS]
 
             for file in files:
+                if files_processed >= MAX_FILES_TO_PROCESS:
+                    break
+
                 file_path = Path(root) / file
 
                 if file_path.suffix.lower() in SKIP_EXTENSIONS:
@@ -213,6 +234,7 @@ def process_directory_contents(
 
                 file_stats = process_file_stats(file_path)
                 pbar.update(1)
+                files_processed += 1
 
                 if not file_stats:
                     continue
