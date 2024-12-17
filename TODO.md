@@ -9,14 +9,9 @@
 
 
 
-- make the output longer and better lol
-  - overall stats for the run
-    - i.e., this analysis took X minutes to complete
-  
 
-
-add readme badge
-
+update ci
+- 'run-script' workflow - needs to support pytorch
 
 
 add ability for users to choose prompt / output
@@ -26,8 +21,10 @@ add ability for users to choose prompt / output
 
 
 
+overall stats for the run
+- i.e., this analysis took X minutes to complete
+  
 
-add 'year in review' type of analysis
 
 -------------------------------------------------------
 
