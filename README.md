@@ -2,6 +2,7 @@
 #### By: [Daniel Nazarian](https://www.danielnazarian.com) 🐧👹
 ##### Contact me at <dnaz@danielnazarian.com>
 
+---
 
 ## Description
 
@@ -21,13 +22,20 @@ AI File Analyzer is a Python-based tool for analyzing Markdown-based task lists 
 git clone https://github.com/dan1229/ai-file-analyzer.git
 ```
 
+2. Install the requirements:
+
+```bash
+pipenv install
+```
+
 ## Usage
 
 Run the script with:
 
 ```bash
-python -m src.main
+python -m src.analyze_files
 ```
+
 
 -------------------------------------------------------
 ##### [https://danielnazarian.com](https://danielnazarian.com)
