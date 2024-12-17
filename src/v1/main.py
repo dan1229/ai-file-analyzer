@@ -3,7 +3,7 @@ import logging
 import argparse
 import json
 
-from src.ai.output_analyzer import OutputAnalyzer
+from .ai.output_analyzer import OutputAnalyzer
 from .utils.file_utils import scan_directory
 from .utils.task_analyzer import process_input_file
 

@@ -2,6 +2,7 @@
 #### By: [Daniel Nazarian](https://www.danielnazarian.com) 🐧👹
 ##### Contact me at <dnaz@danielnazarian.com>
 
+---
 
 ## Description
 
@@ -32,8 +33,9 @@ pipenv install
 Run the script with:
 
 ```bash
-python -m src.main
+python -m src.analyze_files
 ```
+
 
 -------------------------------------------------------
 ##### [https://danielnazarian.com](https://danielnazarian.com)

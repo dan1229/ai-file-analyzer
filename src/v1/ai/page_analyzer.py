@@ -1,6 +1,6 @@
 import re
 from typing import Dict, Any, List, Optional
-from transformers import pipeline
+from transformers import pipeline  # type: ignore[import-untyped]
 from collections import Counter
 import dateparser
 import logging
