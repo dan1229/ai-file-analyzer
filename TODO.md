@@ -26,6 +26,31 @@ overall stats for the run
   
 
 
+
+
+
+
+---
+
+
+use this for 2025 or make a new repo
+- 'you wrapped'???
+
+
+what is the ideal output here?
+- TODo
+
+
+what could we do?
+- analyze files?    
+    - journal
+    - todos
+- email?
+- services?
+    - google drive
+    - letterbox / beli / etc?
+
+
 -------------------------------------------------------
 
 ##### Copyright 2024 © Daniel Nazarian.
